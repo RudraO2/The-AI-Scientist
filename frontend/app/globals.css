@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  html, body {
+    @apply bg-ink-950 text-ink-100 antialiased;
+    background-image:
+      radial-gradient(at 20% 0%, rgba(16, 185, 129, 0.06) 0, transparent 50%),
+      radial-gradient(at 80% 0%, rgba(96, 165, 250, 0.06) 0, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(245, 158, 11, 0.04) 0, transparent 50%);
+    background-attachment: fixed;
+  }
+  ::selection { background: rgba(16, 185, 129, 0.35); }
+}
+
+@layer utilities {
+  .glass {
+    @apply backdrop-blur-xl bg-ink-900/60 border border-ink-700/60;
+  }
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .text-balance { text-wrap: balance; }
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 100%);
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
+}

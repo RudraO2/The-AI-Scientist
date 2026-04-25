@@ -1,0 +1,45 @@
+# Env
+.env
+.env.local
+.env.*.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+.next/
+.turbo/
+dist/
+build/
+out/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# BMad outputs (private)
+_bmad-output/
+
+# Local data
+*.db
+*.sqlite
+local_cache/
+
+# BMad agent framework + Claude tooling (local-only)
+.claude/
+_bmad/
