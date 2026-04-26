@@ -5,6 +5,8 @@
 
 export type Domain = "diagnostics" | "gut_health" | "cell_biology" | "climate" | "other";
 
+export type Currency = "USD" | "EUR" | "GBP" | "INR" | "JPY" | "CAD" | "AUD" | "SGD" | "CHF";
+
 export type NoveltySignal = "not_found" | "similar_work_exists" | "exact_match_found";
 
 export interface ParsedHypothesis {
@@ -41,6 +43,7 @@ export interface Material {
   unit_cost_usd: number;
   line_total_usd: number;
   verified: boolean;
+  purchase_url: string | null;
 }
 
 export interface ProtocolStep {
@@ -81,6 +84,7 @@ export interface ExperimentPlan {
   protocol: ProtocolStep[];
   materials: Material[];
   total_budget_usd: number;
+  currency: Currency;
   timeline: TimelinePhase[];
   total_duration_weeks: number;
   validation: ValidationMetric[];
@@ -106,6 +110,8 @@ export interface ParseQcResponse {
   parsed: ParsedHypothesis;
   qc: LiteratureQCResult;
   recalled_corrections: RecalledCorrectionSummary[];
+  hypothesis?: string | null;
+  currency?: Currency;
 }
 
 export interface LineageEntry {

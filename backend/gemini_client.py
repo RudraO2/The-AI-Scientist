@@ -13,6 +13,7 @@ from prompts import (
     GENERATE_PLAN_SYSTEM,
     GENERATE_PLAN_USER_TEMPLATE,
     CORRECTIONS_BLOCK_TEMPLATE,
+    ENHANCE_HYPOTHESIS_SYSTEM,
 )
 
 
@@ -108,6 +109,91 @@ class GeminiClient:
             raise RuntimeError("Gemini returned empty response (possible safety block)")
         return ParsedHypothesis.model_validate_json(response.text)
 
+    # ---------- Grounded supplier URL resolution (Google Search tool) ----------
+
+    def resolve_product_urls(
+        self,
+        items: list[dict],
+        timeout_seconds: float | None = None,
+    ) -> dict[int, str]:
+        """Use Gemini + Google Search grounding to look up direct supplier product URLs.
+
+        items: [{"index": int, "name": str, "supplier": str, "catalog_number": str|None}]
+        Returns: {index: url} only for items where a plausible supplier URL was found.
+        Errors are swallowed; caller should keep its own fallback URL on miss.
+        """
+        if not items:
+            return {}
+        try:
+            import json as _json
+            lines: list[str] = []
+            for it in items:
+                cat = it.get("catalog_number") or ""
+                lines.append(
+                    f'  {{"index": {it["index"]}, "name": "{it["name"]}", '
+                    f'"supplier": "{it["supplier"]}", "catalog_number": "{cat}"}}'
+                )
+            user_prompt = (
+                "Use Google Search to find the DIRECT product page URL on each supplier's "
+                "official website for each lab item below. Strict requirements:\n"
+                "- The URL host MUST belong to the named supplier (e.g. sigmaaldrich.com, "
+                "thermofisher.com, neb.com, idtdna.com, abcam.com, bio-rad.com, qiagen.com, "
+                "promega.com, fishersci.com, jax.org, atcc.org, addgene.org, cellsignal.com, "
+                "rndsystems.com, takarabio.com).\n"
+                "- Prefer a URL that resolves to a single SKU/product page; avoid generic "
+                "category or search-results pages.\n"
+                "- If you cannot confidently find one, OMIT the entry — do not guess.\n"
+                "- Reply with ONLY a JSON array, no prose. Each element: "
+                '{"index": <int>, "url": "<https url>"}. No markdown fences.\n\n'
+                "Items:\n[\n" + ",\n".join(lines) + "\n]"
+            )
+
+            config = types.GenerateContentConfig(
+                tools=[types.Tool(google_search=types.GoogleSearch())],
+                temperature=0.0,
+                max_output_tokens=2048,
+            )
+            # Grounded calls cannot use response_schema; do plain text + parse.
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=user_prompt,
+                config=config,
+            )
+            raw = (response.text or "").strip()
+            if not raw:
+                return {}
+            # Strip markdown fences if the model added any despite instruction.
+            raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.MULTILINE).strip()
+            # Find first JSON array in the text.
+            m = re.search(r"\[.*\]", raw, flags=re.DOTALL)
+            if not m:
+                return {}
+            arr = _json.loads(m.group(0))
+            out: dict[int, str] = {}
+            for entry in arr:
+                idx = entry.get("index")
+                url = (entry.get("url") or "").strip()
+                if isinstance(idx, int) and url.lower().startswith(("http://", "https://")):
+                    out[idx] = url
+            return out
+        except Exception:
+            return {}
+
+    # ---------- Hypothesis enhancement (rewrite for sharpness) ----------
+
+    def enhance_hypothesis(self, hypothesis: str) -> str:
+        response = self._generate_with_retry(
+            contents=hypothesis,
+            config=types.GenerateContentConfig(
+                system_instruction=ENHANCE_HYPOTHESIS_SYSTEM,
+                temperature=0.4,
+                max_output_tokens=600,
+            ),
+        )
+        if not response.text:
+            raise RuntimeError("Gemini returned empty response (possible safety block)")
+        return response.text.strip().strip('"').strip()
+
     # ---------- Embeddings (literature QC novelty scoring) ----------
 
     def embed_texts(self, texts: list[str]) -> list[list[float]] | None:
@@ -136,6 +222,7 @@ class GeminiClient:
         parsed: ParsedHypothesis,
         qc_summary: str,
         corrections: list[dict] | None = None,
+        currency: str = "USD",
     ) -> ExperimentPlan:
         corrections_block = ""
         if corrections:
@@ -153,6 +240,7 @@ class GeminiClient:
             parsed_json=parsed.model_dump_json(indent=2),
             qc_summary=qc_summary,
             corrections_block=corrections_block,
+            currency=currency,
         )
 
         response = self._generate_with_retry(

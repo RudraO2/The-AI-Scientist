@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getPlanQc } from "@/lib/api";
 import { QcGenerateButton } from "@/components/qc-generate-button";
+import { QcHypothesisEditor } from "@/components/qc-hypothesis-editor";
 import type { NoveltySignal } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -185,10 +186,18 @@ export default async function QcPage({ params }: { params: Promise<{ id: string 
           </section>
 
           {/* Hypothesis Bento */}
-          <section className="w-full max-w-[800px] grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <section className="w-full max-w-[800px] grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <BentoCard label="Testing" body={parsed.intervention} />
             <BentoCard label="Measuring" body={parsed.measurable_outcome} />
             <BentoCard label="Success" body={parsed.threshold} />
+          </section>
+
+          {/* Hypothesis editor / AI enhance */}
+          <section className="w-full max-w-[800px] mb-12 flex justify-end">
+            <QcHypothesisEditor
+              hypothesis={data.hypothesis ?? ""}
+              currency={data.currency ?? "USD"}
+            />
           </section>
 
           {/* Prior Studies */}

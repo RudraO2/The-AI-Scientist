@@ -1,5 +1,5 @@
 import type { ExperimentPlan } from "./types";
-import { formatUsd } from "./utils";
+import { formatMoney } from "./utils";
 
 export function planToMarkdown(plan: ExperimentPlan): string {
   const lines: string[] = [];
@@ -37,19 +37,21 @@ export function planToMarkdown(plan: ExperimentPlan): string {
 
   lines.push("## Materials");
   lines.push("");
-  lines.push("| Item | Supplier | Catalog | Qty | Unit | Line total |");
-  lines.push("|---|---|---|---|---|---|");
+  lines.push("| Item | Supplier | Catalog | Qty | Unit | Line total | Buy |");
+  lines.push("|---|---|---|---|---|---|---|");
+  const cur = plan.currency;
   plan.materials.forEach((m) => {
-    lines.push(`| ${m.name} | ${m.supplier} | ${m.catalog_number ?? "—"} | ${m.quantity} | ${formatUsd(m.unit_cost_usd)} | ${formatUsd(m.line_total_usd)} |`);
+    const buy = m.purchase_url ? `[link](${m.purchase_url})` : "—";
+    lines.push(`| ${m.name} | ${m.supplier} | ${m.catalog_number ?? "—"} | ${m.quantity} | ${formatMoney(m.unit_cost_usd, cur)} | ${formatMoney(m.line_total_usd, cur)} | ${buy} |`);
   });
   lines.push("");
 
   lines.push("## Budget");
   const matsTotal = plan.materials.reduce((s, m) => s + m.line_total_usd, 0);
   const overhead = Math.max(0, plan.total_budget_usd - matsTotal);
-  lines.push(`- Materials: ${formatUsd(matsTotal)}`);
-  lines.push(`- Overhead / labour estimate: ${formatUsd(overhead)}`);
-  lines.push(`- **Total:** ${formatUsd(plan.total_budget_usd)}`);
+  lines.push(`- Materials: ${formatMoney(matsTotal, cur)}`);
+  lines.push(`- Overhead / labour estimate: ${formatMoney(overhead, cur)}`);
+  lines.push(`- **Total:** ${formatMoney(plan.total_budget_usd, cur)}`);
   lines.push("");
 
   lines.push(`## Timeline (${plan.total_duration_weeks} weeks total)`);

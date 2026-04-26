@@ -20,13 +20,14 @@ from schemas import (
     LiteratureQCResult, ParsedHypothesis, ExperimentPlan,
     ParseQcResponse, RecalledCorrectionSummary,
     LineageEntry, HistoryItem, Domain, RecallQuery,
+    EnhanceHypothesisRequest, EnhanceHypothesisResponse,
 )
 import re
 from difflib import SequenceMatcher
 from gemini_client import GeminiClient
 from hydra_client import HydraClient
 from literature import run_literature_qc
-from validation import normalize_plan
+from validation import normalize_plan, url_matches_supplier
 import db
 
 
@@ -98,6 +99,23 @@ async def health():
     }
 
 
+# ---------- Hypothesis enhancement ----------
+
+@app.post("/api/enhance_hypothesis", response_model=EnhanceHypothesisResponse)
+async def enhance_hypothesis(req: EnhanceHypothesisRequest):
+    gemini: GeminiClient = app.state.gemini
+    try:
+        out = await asyncio.to_thread(gemini.enhance_hypothesis, req.hypothesis)
+    except Exception as e:
+        if _is_gemini_rate_limit_error(e):
+            raise HTTPException(
+                status_code=429,
+                detail="Gemini quota/rate limit reached. Please retry shortly.",
+            ) from e
+        raise HTTPException(status_code=502, detail=f"Hypothesis enhance failed: {e}") from e
+    return EnhanceHypothesisResponse(hypothesis=out)
+
+
 # ---------- Stage 1+2: parse + literature QC + recall ----------
 
 _SECTION_HINT_RE = re.compile(r"\[section:([a-z]+)\]")
@@ -157,6 +175,7 @@ async def parse_qc(req: GeneratePlanRequest):
         domain=parsed.domain,
         parsed=parsed.model_dump(),
         qc=qc_result.model_dump(),
+        currency=req.currency,
     )
 
     return ParseQcResponse(
@@ -164,6 +183,8 @@ async def parse_qc(req: GeneratePlanRequest):
         parsed=parsed,
         qc=qc_result,
         recalled_corrections=_summarize_recall(corrections),
+        hypothesis=req.hypothesis,
+        currency=req.currency,
     )
 
 
@@ -198,6 +219,7 @@ async def generate_plan(plan_id: str):
         f"({len(qc_result.references)} references found.)"
     )
 
+    currency = rec.get("currency") or "USD"
     try:
         plan = await asyncio.to_thread(
             gemini.generate_plan,
@@ -205,6 +227,7 @@ async def generate_plan(plan_id: str):
             parsed=parsed,
             qc_summary=qc_summary,
             corrections=corrections,
+            currency=currency,
         )
     except Exception as e:
         if _is_gemini_rate_limit_error(e):
@@ -217,7 +240,12 @@ async def generate_plan(plan_id: str):
             ) from e
         raise HTTPException(status_code=502, detail=f"Plan generation failed: {e}") from e
 
+    plan.currency = currency
     plan = normalize_plan(plan)
+
+    # Optional: use Gemini Google Search grounding to resolve direct supplier product URLs.
+    if os.environ.get("ENABLE_GROUNDED_PURCHASE_URLS", "1") not in ("0", "false", "False"):
+        await _ground_purchase_urls(gemini, plan)
 
     # Resolve each applied correction to its source row + write `applied` lineage rows.
     await _resolve_and_record_applied(plan_id, plan, corrections)
@@ -246,6 +274,32 @@ def _match_score(a: str, b: str) -> float:
 
 
 _LINEAGE_MATCH_THRESHOLD = 0.55
+
+
+async def _ground_purchase_urls(gemini: GeminiClient, plan: ExperimentPlan) -> None:
+    """Use Google Search grounding to upgrade fallback search URLs to direct product pages.
+
+    Best-effort: silently keeps the existing fallback URL on miss/error.
+    Only queries items with a catalog_number (cheaper signal, fewer false matches).
+    """
+    candidates = [
+        {"index": i, "name": m.name, "supplier": m.supplier,
+         "catalog_number": m.catalog_number}
+        for i, m in enumerate(plan.materials)
+        if m.catalog_number
+    ]
+    if not candidates:
+        return
+    try:
+        resolved = await asyncio.to_thread(gemini.resolve_product_urls, candidates)
+    except Exception as e:
+        logger.warning("Grounded URL resolution failed: %s", e)
+        return
+    for idx, url in resolved.items():
+        if 0 <= idx < len(plan.materials):
+            m = plan.materials[idx]
+            if url_matches_supplier(url, m.supplier):
+                m.purchase_url = url
 
 
 async def _resolve_and_record_applied(plan_id: str, plan: ExperimentPlan,
@@ -309,6 +363,8 @@ async def get_plan_qc(plan_id: str):
     return ParseQcResponse(
         plan_id=plan_id, parsed=parsed, qc=qc_result,
         recalled_corrections=_summarize_recall(corrections),
+        hypothesis=rec["hypothesis"],
+        currency=rec.get("currency") or "USD",
     )
 
 

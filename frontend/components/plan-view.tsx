@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { CorrectionDialog } from "@/components/correction-dialog";
 import { LineagePanel } from "@/components/lineage-panel";
-import { formatUsd } from "@/lib/utils";
+import { formatMoney } from "@/lib/utils";
 import type { ExperimentPlan, Domain } from "@/lib/types";
 
 type TabKey = "protocol" | "materials" | "timeline" | "validation" | "risks";
@@ -257,7 +257,7 @@ function MaterialsSection({ plan, planId, domain }: { plan: ExperimentPlan; plan
           planId={planId}
           domain={domain}
           section="materials"
-          beforeText={plan.materials.map((m) => `${m.name} (${m.supplier}${m.catalog_number ? ` #${m.catalog_number}` : ""}) — ${m.quantity} @ ${formatUsd(m.unit_cost_usd)}`).join("\n")}
+          beforeText={plan.materials.map((m) => `${m.name} (${m.supplier}${m.catalog_number ? ` #${m.catalog_number}` : ""}) — ${m.quantity} @ ${formatMoney(m.unit_cost_usd, plan.currency)}`).join("\n")}
           trigger={
             <button
               className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#717976] hover:text-[#16342e] inline-flex items-center gap-1.5 transition-colors"
@@ -311,6 +311,20 @@ function MaterialsSection({ plan, planId, domain }: { plan: ExperimentPlan; plan
                     </span>
                   )
                 )}
+                {m.purchase_url && (
+                  <a
+                    href={m.purchase_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Open ${m.supplier} listing in a new tab`}
+                    className="inline-flex items-center gap-1 rounded-full bg-[#16342e] text-[#f6f3f2] hover:bg-[#2D4B44] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-colors"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: "11px" }}>
+                      shopping_cart
+                    </span>
+                    Buy
+                  </a>
+                )}
               </div>
             </div>
             <div
@@ -323,13 +337,13 @@ function MaterialsSection({ plan, planId, domain }: { plan: ExperimentPlan; plan
               className="col-span-4 md:col-span-2 text-sm text-[#414846]"
               style={{ fontFamily: "'Space Grotesk', monospace" }}
             >
-              {formatUsd(m.unit_cost_usd)}
+              {formatMoney(m.unit_cost_usd, plan.currency)}
             </div>
             <div
               className="col-span-4 md:col-span-3 text-right text-sm font-semibold text-[#16342e]"
               style={{ fontFamily: "'Space Grotesk', monospace" }}
             >
-              {formatUsd(m.line_total_usd)}
+              {formatMoney(m.line_total_usd, plan.currency)}
             </div>
           </div>
         ))}
@@ -339,7 +353,7 @@ function MaterialsSection({ plan, planId, domain }: { plan: ExperimentPlan; plan
             className="col-span-3 text-right text-base font-semibold text-[#16342e]"
             style={{ fontFamily: "'Space Grotesk', monospace" }}
           >
-            {formatUsd(total)}
+            {formatMoney(total, plan.currency)}
           </div>
         </div>
       </div>

@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS plans (
     parsed       TEXT NOT NULL,
     qc           TEXT NOT NULL,
     plan_payload TEXT,
-    created_at   TEXT NOT NULL
+    created_at   TEXT NOT NULL,
+    currency     TEXT NOT NULL DEFAULT 'USD'
 );
 
 CREATE TABLE IF NOT EXISTS corrections (
@@ -66,6 +67,10 @@ def _connect() -> sqlite3.Connection:
 def init_db() -> None:
     with _connect() as conn:
         conn.executescript(SCHEMA)
+        # Idempotent column add for existing dbs created before currency was tracked.
+        cols = {row["name"] for row in conn.execute("PRAGMA table_info(plans)").fetchall()}
+        if "currency" not in cols:
+            conn.execute("ALTER TABLE plans ADD COLUMN currency TEXT NOT NULL DEFAULT 'USD'")
 
 
 def is_ready() -> bool:
@@ -78,13 +83,13 @@ def is_ready() -> bool:
 
 
 def insert_partial_plan(*, plan_id: str, hypothesis: str, domain: str,
-                        parsed: dict, qc: dict) -> None:
+                        parsed: dict, qc: dict, currency: str = "USD") -> None:
     with _connect() as conn:
         conn.execute(
-            "INSERT INTO plans (plan_id, hypothesis, domain, parsed, qc, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO plans (plan_id, hypothesis, domain, parsed, qc, created_at, currency) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (plan_id, hypothesis, domain, json.dumps(parsed), json.dumps(qc),
-             datetime.now(timezone.utc).isoformat())
+             datetime.now(timezone.utc).isoformat(), currency)
         )
 
 
@@ -101,6 +106,7 @@ def get_plan(plan_id: str) -> dict | None:
             "qc": json.loads(row["qc"]),
             "plan_payload": json.loads(row["plan_payload"]) if row["plan_payload"] else None,
             "created_at": row["created_at"],
+            "currency": row["currency"] if "currency" in row.keys() else "USD",
         }
 
 

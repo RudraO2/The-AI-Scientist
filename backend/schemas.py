@@ -6,6 +6,9 @@ from pydantic import BaseModel, Field
 
 Domain = Literal["diagnostics", "gut_health", "cell_biology", "climate", "other"]
 
+Currency = Literal["USD", "EUR", "GBP", "INR", "JPY", "CAD", "AUD", "SGD", "CHF"]
+DEFAULT_CURRENCY: Currency = "USD"
+
 
 class ParsedHypothesis(BaseModel):
     """Structured decomposition of the user's natural-language hypothesis."""
@@ -47,6 +50,10 @@ class Material(BaseModel):
     verified: bool = Field(
         default=False,
         description="True when supplier is recognised AND catalog_number matches a SKU shape. Set server-side, not by the model.",
+    )
+    purchase_url: Optional[str] = Field(
+        default=None,
+        description="Direct product/SKU URL on the supplier site, OR a supplier search-results URL pre-filled with the catalog number. Set by the model when known; the server fills a search URL when missing.",
     )
 
 
@@ -90,6 +97,7 @@ class ExperimentPlan(BaseModel):
     protocol: list[ProtocolStep]
     materials: list[Material]
     total_budget_usd: float
+    currency: Currency = DEFAULT_CURRENCY
 
     timeline: list[TimelinePhase]
     total_duration_weeks: float
@@ -104,6 +112,15 @@ class ExperimentPlan(BaseModel):
 
 class GeneratePlanRequest(BaseModel):
     hypothesis: str = Field(min_length=20, max_length=2000)
+    currency: Currency = DEFAULT_CURRENCY
+
+
+class EnhanceHypothesisRequest(BaseModel):
+    hypothesis: str = Field(min_length=5, max_length=2000)
+
+
+class EnhanceHypothesisResponse(BaseModel):
+    hypothesis: str
 
 
 class GeneratePlanResponse(BaseModel):
@@ -149,6 +166,8 @@ class ParseQcResponse(BaseModel):
     parsed: ParsedHypothesis
     qc: LiteratureQCResult
     recalled_corrections: list[RecalledCorrectionSummary] = Field(default_factory=list)
+    hypothesis: Optional[str] = None
+    currency: Currency = DEFAULT_CURRENCY
 
 
 class LineageEntry(BaseModel):

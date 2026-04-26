@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getPlan } from "@/lib/api";
 import { PlanView } from "@/components/plan-view";
 import { ExportMenu } from "@/components/export-menu";
-import { formatUsd } from "@/lib/utils";
+import { formatMoney } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -156,7 +156,7 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
                   className="text-[24px] leading-[1.3] font-medium text-[#16342e]"
                   style={{ fontFamily: "Newsreader, serif" }}
                 >
-                  {formatUsd(plan.total_budget_usd)}
+                  {formatMoney(plan.total_budget_usd, plan.currency)}
                 </p>
               </div>
               <div className="text-center border-r-[0.5px] border-[#c1c8c5]">

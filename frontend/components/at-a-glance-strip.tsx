@@ -2,7 +2,7 @@
 import { DollarSign, Clock, Layers } from "lucide-react";
 import { BudgetSparkline } from "@/components/budget-sparkline";
 import { MiniGantt } from "@/components/mini-gantt";
-import { formatUsd } from "@/lib/utils";
+import { formatMoney } from "@/lib/utils";
 import type { ExperimentPlan } from "@/lib/types";
 
 export function AtAGlanceStrip({ plan, onTabChange }: {
@@ -21,15 +21,15 @@ export function AtAGlanceStrip({ plan, onTabChange }: {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <Panel onClick={() => onTabChange("budget")} icon={DollarSign} label="Budget">
         <div className="flex items-baseline justify-between">
-          <span className="font-mono text-2xl text-ink-50">{formatUsd(plan.total_budget_usd)}</span>
-          <span className="text-[10px] uppercase tracking-wider text-ink-500">Materials {formatUsd(matsTotal)}</span>
+          <span className="font-mono text-2xl text-ink-50">{formatMoney(plan.total_budget_usd, plan.currency)}</span>
+          <span className="text-[10px] uppercase tracking-wider text-ink-500">Materials {formatMoney(matsTotal, plan.currency)}</span>
         </div>
         <div className="mt-2">
           <BudgetSparkline values={plan.materials.map((m) => m.line_total_usd)} />
         </div>
         {topItem && (
           <p className="mt-1 text-xs text-ink-400 truncate">
-            Top item: <span className="text-ink-200">{topItem.name}</span> · {formatUsd(topItem.line_total_usd)}
+            Top item: <span className="text-ink-200">{topItem.name}</span> · {formatMoney(topItem.line_total_usd, plan.currency)}
           </p>
         )}
       </Panel>
@@ -56,7 +56,7 @@ export function AtAGlanceStrip({ plan, onTabChange }: {
           {top3.map((m, i) => (
             <li key={i} className="flex items-center justify-between gap-2 text-xs">
               <span className="text-ink-300 truncate">{m.name}</span>
-              <span className="font-mono text-ink-400 flex-shrink-0">{formatUsd(m.line_total_usd)}</span>
+              <span className="font-mono text-ink-400 flex-shrink-0">{formatMoney(m.line_total_usd, plan.currency)}</span>
             </li>
           ))}
         </ul>

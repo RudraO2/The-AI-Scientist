@@ -1,6 +1,6 @@
 import type {
   GeneratePlanResponse, FeedbackPayload, ParseQcResponse,
-  LineageEntry, HistoryItem, Domain,
+  LineageEntry, HistoryItem, Domain, Currency,
 } from "./types";
 
 function resolveUrl(path: string): string {
@@ -26,8 +26,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return r.json() as Promise<T>;
 }
 
-export function parseQc(hypothesis: string) {
+export function parseQc(hypothesis: string, currency: Currency = "USD") {
   return request<ParseQcResponse>("/api/parse_qc", {
+    method: "POST",
+    body: JSON.stringify({ hypothesis, currency }),
+  });
+}
+
+export function enhanceHypothesis(hypothesis: string) {
+  return request<{ hypothesis: string }>("/api/enhance_hypothesis", {
     method: "POST",
     body: JSON.stringify({ hypothesis }),
   });
