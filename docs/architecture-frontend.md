@@ -151,7 +151,7 @@ PlanPage (server) → getPlan(id) → PlanView + QcCard + ParsedHypothesisCard
 
 | Env var | Default | Purpose |
 |---|---|---|
-| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Backend base URL. `NEXT_PUBLIC_*` is exposed to the browser bundle — set carefully on deploy. |
+| `API_PROXY_URL` | `http://localhost:8000` | Backend base URL used by Next.js rewrites to proxy `/api/*` server-side. |
 
 ## Performance Notes
 
@@ -165,4 +165,4 @@ None present in repo. Hackathon scope.
 
 ## Deployment
 
-Local only. `npm run dev` → `next dev` on port 3000. No `next build` artifacts produced. See [Development Guide](./development-guide.md).
+Local development still uses `npm run dev` → `next dev` on port 3000. For Vercel, set the project root to `frontend` and configure `API_PROXY_URL` to the deployed backend so browser requests stay same-origin through rewrites. See [Development Guide](./development-guide.md).

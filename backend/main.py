@@ -17,15 +17,16 @@ from pydantic import BaseModel
 from schemas import (
     GeneratePlanRequest, GeneratePlanResponse,
     FeedbackRequest, FeedbackResponse,
-    LiteratureQCResult, ParsedHypothesis, ExperimentPlan, AppliedCorrection,
+    LiteratureQCResult, ParsedHypothesis, ExperimentPlan,
     ParseQcResponse, RecalledCorrectionSummary,
-    LineageEntry, HistoryItem, Domain,
+    LineageEntry, HistoryItem, Domain, RecallQuery,
 )
 import re
 from difflib import SequenceMatcher
 from gemini_client import GeminiClient
 from hydra_client import HydraClient
 from literature import run_literature_qc
+from validation import normalize_plan
 import db
 
 
@@ -35,6 +36,10 @@ if not logger.handlers:
         level=os.environ.get("LOG_LEVEL", "INFO"),
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
+
+
+def _is_gemini_rate_limit_error(exc: Exception) -> bool:
+    return GeminiClient.is_rate_limit_error(exc)
 
 
 @asynccontextmanager
@@ -119,10 +124,22 @@ async def parse_qc(req: GeneratePlanRequest):
     try:
         parsed = await asyncio.to_thread(gemini.parse_hypothesis, req.hypothesis)
     except Exception as e:
+        if _is_gemini_rate_limit_error(e):
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    "Gemini quota/rate limit reached. Please retry shortly, switch to another model, "
+                    "or increase API quota."
+                ),
+            ) from e
         raise HTTPException(status_code=502, detail=f"Hypothesis parse failed: {e}") from e
 
     qc_task = asyncio.create_task(
-        run_literature_qc(hypothesis=req.hypothesis, keywords=parsed.keywords)
+        run_literature_qc(
+            hypothesis=req.hypothesis,
+            keywords=parsed.keywords,
+            embedder=gemini.embed_texts,
+        )
     )
     corrections_task = asyncio.create_task(
         asyncio.to_thread(
@@ -190,17 +207,17 @@ async def generate_plan(plan_id: str):
             corrections=corrections,
         )
     except Exception as e:
+        if _is_gemini_rate_limit_error(e):
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    "Gemini quota/rate limit reached while generating the plan. Please retry shortly, "
+                    "switch to another model, or increase API quota."
+                ),
+            ) from e
         raise HTTPException(status_code=502, detail=f"Plan generation failed: {e}") from e
 
-    if not plan.applied_corrections and corrections:
-        plan.applied_corrections = [
-            AppliedCorrection(
-                correction_text=c["text"][:400],
-                relevance_score=c["score"],
-                applied_to_section="protocol",
-            )
-            for c in corrections[:2]
-        ]
+    plan = normalize_plan(plan)
 
     # Resolve each applied correction to its source row + write `applied` lineage rows.
     await _resolve_and_record_applied(plan_id, plan, corrections)
@@ -208,6 +225,27 @@ async def generate_plan(plan_id: str):
     await asyncio.to_thread(db.set_plan_payload, plan_id, plan.model_dump())
 
     return GeneratePlanResponse(plan_id=plan_id, parsed=parsed, qc=qc_result, plan=plan)
+
+
+_TOKEN_RE = re.compile(r"\w+")
+
+
+def _token_jaccard(a: str, b: str) -> float:
+    ta = set(_TOKEN_RE.findall(a.lower()))
+    tb = set(_TOKEN_RE.findall(b.lower()))
+    if not ta or not tb:
+        return 0.0
+    return len(ta & tb) / len(ta | tb)
+
+
+def _match_score(a: str, b: str) -> float:
+    """Blend SequenceMatcher (catches paraphrase with shared substrings) with token Jaccard
+    (catches reordered paraphrase). Either signal alone is brittle on Gemini output."""
+    ratio = SequenceMatcher(None, a, b).ratio()
+    return 0.6 * ratio + 0.4 * _token_jaccard(a, b)
+
+
+_LINEAGE_MATCH_THRESHOLD = 0.55
 
 
 async def _resolve_and_record_applied(plan_id: str, plan: ExperimentPlan,
@@ -218,13 +256,13 @@ async def _resolve_and_record_applied(plan_id: str, plan: ExperimentPlan,
         return
     for ac in plan.applied_corrections:
         best = None
-        best_ratio = 0.0
+        best_score = 0.0
         for c in recalled:
-            ratio = SequenceMatcher(None, ac.correction_text, c["text"]).ratio()
-            if ratio > best_ratio:
-                best_ratio = ratio
+            score = _match_score(ac.correction_text, c["text"])
+            if score > best_score:
+                best_score = score
                 best = c
-        if not best or best_ratio < 0.8:
+        if not best or best_score < _LINEAGE_MATCH_THRESHOLD:
             continue
         row = await asyncio.to_thread(db.get_correction_by_hydra_id, best["source_id"])
         if not row:
@@ -355,7 +393,7 @@ async def submit_feedback(req: FeedbackRequest):
 
     return FeedbackResponse(
         success=memory_id is not None,
-        memory_id=memory_id or "",
+        memory_id=memory_id,
         correction_id=correction_id,
         message=(
             "Correction stored. Future plans for similar experiments will incorporate it."
@@ -366,12 +404,6 @@ async def submit_feedback(req: FeedbackRequest):
 
 
 # ---------- List recalled corrections (debug / transparency) ----------
-
-class RecallQuery(BaseModel):
-    query: str
-    domain: str | None = None
-    top_k: int = 5
-
 
 @app.post("/api/recall")
 async def recall(q: RecallQuery):

@@ -84,7 +84,7 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
           </Link>
           <Link
             href="/history"
-            className="px-4 py-3 flex items-center gap-3 text-sm tracking-tight text-[#2D4B44] bg-stone-200/50 font-bold border-l-4 border-[#2D4B44]"
+            className="px-4 py-3 flex items-center gap-3 text-sm tracking-tight text-stone-600 hover:text-[#2D4B44] hover:bg-stone-100 transition-all duration-150"
             style={{ fontFamily: "Newsreader, serif" }}
           >
             <span className="material-symbols-outlined">inventory_2</span>
@@ -233,7 +233,7 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
                           <a
                             href={r.url}
                             target="_blank"
-                            rel="noopener"
+                            rel="noopener noreferrer"
                             className="text-[#16342e] underline underline-offset-2 hover:decoration-[#16342e]"
                           >
                             {r.title}

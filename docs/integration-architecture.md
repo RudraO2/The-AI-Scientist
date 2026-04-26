@@ -159,4 +159,4 @@ The backend Pydantic schema in `backend/schemas.py` is mirrored manually as Type
 There is none. Both parts run on `localhost`. A future deploy would need:
 
 - Backend: container or PaaS with `GEMINI_API_KEY`, `HYDRADB_API_KEY`, `CORS_ORIGINS=https://{frontend-url}`, persistent state (SQLite swap-in for `PLANS`)
-- Frontend: Vercel or static host with `NEXT_PUBLIC_API_URL=https://{backend-url}`
+- Frontend: Vercel with `frontend` as the root directory and `API_PROXY_URL=https://{backend-url}` so `/api/*` requests are rewritten server-side

@@ -210,7 +210,7 @@ export default async function QcPage({ params }: { params: Promise<{ id: string 
                         <a
                           href={ref.url}
                           target="_blank"
-                          rel="noopener"
+                          rel="noopener noreferrer"
                           className="text-base leading-[1.6] font-semibold text-[#16342e] underline underline-offset-4 decoration-stone-300 group-hover:decoration-[#16342e] transition-colors cursor-pointer"
                           style={{ fontFamily: "Inter, system-ui, sans-serif" }}
                         >

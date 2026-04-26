@@ -60,6 +60,9 @@ class FakeGeminiClient:
     def generate_plan(self, **kwargs) -> ExperimentPlan:
         return build_plan()
 
+    def embed_texts(self, texts):
+        return None
+
 
 class FakeHydraClient:
     def ensure_tenant(self, max_wait_seconds: float = 60.0) -> None:

@@ -40,6 +40,7 @@ export interface Material {
   quantity: string;
   unit_cost_usd: number;
   line_total_usd: number;
+  verified: boolean;
 }
 
 export interface ProtocolStep {

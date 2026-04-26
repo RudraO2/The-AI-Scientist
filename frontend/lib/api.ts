@@ -3,13 +3,20 @@ import type {
   LineageEntry, HistoryItem, Domain,
 } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+function resolveUrl(path: string): string {
+  if (typeof window === "undefined") {
+    const base = (process.env.API_PROXY_URL ?? "http://localhost:8000").replace(/\/$/, "");
+    return `${base}${path}`;
+  }
+  return path;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(`${API_URL}${path}`, {
+  const r = await fetch(resolveUrl(path), {
     ...init,
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
     cache: "no-store",
+    signal: AbortSignal.timeout(30_000),
   });
   if (!r.ok) {
     let detail = `${r.status} ${r.statusText}`;
@@ -50,7 +57,7 @@ export function getHistory(domain?: Domain) {
 }
 
 export function submitFeedback(payload: FeedbackPayload) {
-  return request<{ success: boolean; memory_id: string; correction_id: number; message: string }>("/api/feedback", {
+  return request<{ success: boolean; memory_id: string | null; correction_id: number; message: string }>("/api/feedback", {
     method: "POST",
     body: JSON.stringify(payload),
   });

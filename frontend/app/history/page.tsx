@@ -6,11 +6,12 @@ import type { HistoryItem } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 export default async function HistoryPage() {
-  let items: HistoryItem[];
+  let items: HistoryItem[] = [];
+  let fetchError: string | null = null;
   try {
     items = await getHistory();
-  } catch {
-    items = [];
+  } catch (e) {
+    fetchError = e instanceof Error ? e.message : "Failed to load history";
   }
 
   return (
@@ -100,6 +101,11 @@ export default async function HistoryPage() {
             </p>
           </div>
 
+          {fetchError && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-4 py-3 rounded">
+              {fetchError}
+            </p>
+          )}
           <HistoryList items={items} />
         </div>
       </main>

@@ -185,4 +185,4 @@ See [Source Tree Analysis](./source-tree-analysis.md) for the annotated tree.
 None today. Future work:
 
 - Backend → containerise (uvicorn + gunicorn worker, port 8000), set env vars, wire to managed Postgres/Redis if persistent state is needed
-- Frontend → Vercel (zero-config Next 15) with `NEXT_PUBLIC_API_URL` pointing at deployed backend, set `CORS_ORIGINS` on backend to match
+- Frontend → Vercel with `frontend` as the project root, set `API_PROXY_URL` to the backend base URL, and keep browser traffic on same-origin `/api/*` requests via Next.js rewrites

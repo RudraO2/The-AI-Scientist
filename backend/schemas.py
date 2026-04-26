@@ -44,6 +44,10 @@ class Material(BaseModel):
     quantity: str = Field(description="e.g. '1 mg', '500 mL', '10 plates'")
     unit_cost_usd: float
     line_total_usd: float
+    verified: bool = Field(
+        default=False,
+        description="True when supplier is recognised AND catalog_number matches a SKU shape. Set server-side, not by the model.",
+    )
 
 
 class ProtocolStep(BaseModel):
@@ -122,7 +126,7 @@ class FeedbackRequest(BaseModel):
 
 class FeedbackResponse(BaseModel):
     success: bool
-    memory_id: str
+    memory_id: Optional[str]
     correction_id: int
     message: str
 
@@ -159,6 +163,12 @@ class LineageEntry(BaseModel):
     source_plan_id: str
     source_domain: Optional[str] = None
     source_created_at: Optional[str] = None
+
+
+class RecallQuery(BaseModel):
+    query: str
+    domain: str | None = None
+    top_k: int = 5
 
 
 class HistoryItem(BaseModel):

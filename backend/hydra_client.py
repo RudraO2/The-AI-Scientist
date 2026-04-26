@@ -8,10 +8,13 @@ Design notes:
   chunks while recall_preferences returned the right hits.
 """
 from __future__ import annotations
+import logging
 import os
 import time
 from typing import Any
 from hydra_db import HydraDB
+
+logger = logging.getLogger(__name__)
 
 _TENANT_READY: dict[str, bool] = {}
 
@@ -30,8 +33,8 @@ class HydraClient:
             return
         try:
             self.client.tenant.create(tenant_id=self.tenant_id)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Tenant create skipped (likely already exists): %s", e)
 
         deadline = time.time() + max_wait_seconds
         while time.time() < deadline:
@@ -108,13 +111,16 @@ class HydraClient:
         if rating is not None:
             parts.append(f"[rating:{rating}/5]")
         parts.append("Scientist correction.")
+        def _sanitize(s: str, limit: int = 400) -> str:
+            return s.strip()[:limit].replace("|", "｜")
+
         if before_text.strip() != after_text.strip():
-            parts.append(f"Original: {before_text.strip()[:400]} |")
-            parts.append(f"Corrected to: {after_text.strip()[:400]} |")
+            parts.append(f"Original: {_sanitize(before_text)} |")
+            parts.append(f"Corrected to: {_sanitize(after_text)} |")
         else:
-            parts.append(f"Text: {before_text.strip()[:400]} |")
+            parts.append(f"Text: {_sanitize(before_text)} |")
         if rationale.strip():
-            parts.append(f"Reason: {rationale.strip()[:400]}")
+            parts.append(f"Reason: {_sanitize(rationale)}")
         if annotation and annotation.strip():
-            parts.append(f"Note: {annotation.strip()[:400]}")
+            parts.append(f"Note: {_sanitize(annotation)}")
         return " ".join(parts)

@@ -6,11 +6,10 @@ import { LineagePanel } from "@/components/lineage-panel";
 import { formatUsd } from "@/lib/utils";
 import type { ExperimentPlan, Domain } from "@/lib/types";
 
-type TabKey = "protocol" | "materials" | "budget" | "timeline" | "validation" | "risks";
+type TabKey = "protocol" | "materials" | "timeline" | "validation" | "risks";
 const TABS: { key: TabKey; label: string }[] = [
   { key: "protocol", label: "Protocol" },
   { key: "materials", label: "Materials" },
-  { key: "budget", label: "Budget" },
   { key: "timeline", label: "Timeline" },
   { key: "validation", label: "Success Metrics" },
   { key: "risks", label: "Risks" },
@@ -49,7 +48,6 @@ export function PlanView({ plan, planId }: { plan: ExperimentPlan; planId: strin
       <div data-tab-content={tab}>
         {tab === "protocol" && <ProtocolSection plan={plan} planId={planId} domain={domain} />}
         {tab === "materials" && <MaterialsSection plan={plan} planId={planId} domain={domain} />}
-        {tab === "budget" && <BudgetSection plan={plan} planId={planId} domain={domain} />}
         {tab === "timeline" && <TimelineSection plan={plan} planId={planId} domain={domain} />}
         {tab === "validation" && <ValidationSection plan={plan} planId={planId} domain={domain} />}
         {tab === "risks" && <RisksSection plan={plan} planId={planId} domain={domain} />}
@@ -291,11 +289,28 @@ function MaterialsSection({ plan, planId, domain }: { plan: ExperimentPlan; plan
             <div className="col-span-12 md:col-span-5">
               <div className="text-sm font-semibold text-[#16342e]">{m.name}</div>
               <div
-                className="text-xs text-[#717976] mt-0.5"
+                className="text-xs text-[#717976] mt-0.5 flex flex-wrap items-center gap-2"
                 style={{ fontFamily: "'Space Grotesk', monospace" }}
               >
-                {m.supplier}
-                {m.catalog_number && <span> · #{m.catalog_number}</span>}
+                <span>{m.supplier}</span>
+                {m.catalog_number && <span>· #{m.catalog_number}</span>}
+                {m.catalog_number && (
+                  m.verified ? (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full bg-[#dfe1d0] text-[#16342e] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                      title="Supplier recognised and catalog number matches a SKU shape. Not verified against the supplier catalog."
+                    >
+                      verified
+                    </span>
+                  ) : (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full bg-[#f4d8c8] text-[#7a3a1a] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                      title="Supplier not in the recognised list or catalog number does not look like a SKU. Confirm before ordering."
+                    >
+                      unverified
+                    </span>
+                  )
+                )}
               </div>
             </div>
             <div
@@ -332,92 +347,15 @@ function MaterialsSection({ plan, planId, domain }: { plan: ExperimentPlan; plan
   );
 }
 
-function BudgetSection({ plan, planId, domain }: { plan: ExperimentPlan; planId: string; domain: Domain }) {
-  const matsTotal = plan.materials.reduce((s, m) => s + m.line_total_usd, 0);
-  const remainder = Math.max(0, plan.total_budget_usd - matsTotal);
-  const labour = remainder * 0.6;
-  const equipment = remainder * 0.25;
-  const consumables = remainder * 0.15;
-  const lines: { label: string; value: number; estimate?: boolean }[] = [
-    { label: "Materials & reagents", value: matsTotal },
-    { label: "Labour (1 FTE loaded)", value: labour, estimate: true },
-    { label: "Equipment / instrument time", value: equipment, estimate: true },
-    { label: "Consumables & overhead", value: consumables, estimate: true },
-  ];
-  return (
-    <section className="space-y-8">
-      <SectionHeader title="Budget — line items" pill={formatUsd(plan.total_budget_usd)}>
-        <CorrectionDialog
-          planId={planId}
-          domain={domain}
-          section="budget"
-          beforeText={lines.map((l) => `${l.label}: ${formatUsd(l.value)}`).join("\n") + `\nTotal: ${formatUsd(plan.total_budget_usd)}`}
-          trigger={
-            <button
-              className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#717976] hover:text-[#16342e] inline-flex items-center gap-1.5 transition-colors"
-              style={{ fontFamily: "Inter, system-ui, sans-serif" }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>
-                edit_note
-              </span>
-              Suggest correction
-            </button>
-          }
-        />
-      </SectionHeader>
-      <div className="space-y-4">
-        {lines.map((l) => {
-          const pct = plan.total_budget_usd > 0 ? (l.value / plan.total_budget_usd) * 100 : 0;
-          return (
-            <div key={l.label}>
-              <div className="flex items-center justify-between text-sm">
-                <span
-                  className="text-[#414846] inline-flex items-center gap-2"
-                  style={{ fontFamily: "Inter, system-ui, sans-serif" }}
-                >
-                  {l.label}
-                  {l.estimate && (
-                    <span
-                      className="text-[9px] font-semibold uppercase tracking-[0.05em] text-[#717976] px-1.5 py-0.5 bg-[#e5e2e1]"
-                      style={{ fontFamily: "'Space Grotesk', monospace" }}
-                    >
-                      est.
-                    </span>
-                  )}
-                </span>
-                <span
-                  className="text-[#16342e] font-semibold"
-                  style={{ fontFamily: "'Space Grotesk', monospace" }}
-                >
-                  {formatUsd(l.value)}
-                </span>
-              </div>
-              <div className="mt-1.5 h-1 bg-[#e5e2e1] overflow-hidden">
-                <div className="h-full bg-[#16342e]" style={{ width: `${Math.min(100, Math.max(0, pct))}%` }} />
-              </div>
-            </div>
-          );
-        })}
-        <div className="pt-4 border-t-[0.5px] border-[#c1c8c5] flex items-center justify-between">
-          <span className="text-sm text-[#414846]">Total project cost</span>
-          <span
-            className="text-2xl font-medium text-[#16342e]"
-            style={{ fontFamily: "Newsreader, serif" }}
-          >
-            {formatUsd(plan.total_budget_usd)}
-          </span>
-        </div>
-        <p className="text-[10px] text-[#717976] pt-1" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
-          Materials are itemized from supplier catalog. Labour, equipment, consumables are heuristic splits of remainder — adjust per your lab&apos;s rates.
-        </p>
-      </div>
-    </section>
-  );
-}
-
 function TimelineSection({ plan, planId, domain }: { plan: ExperimentPlan; planId: string; domain: Domain }) {
   const totalWk = plan.total_duration_weeks || plan.timeline.reduce((s, p) => s + p.duration_weeks, 0);
-  let cursor = 0;
+  const positions = plan.timeline.map((_, i) => {
+    const start = plan.timeline.slice(0, i).reduce((s, p) => s + p.duration_weeks, 0);
+    return {
+      startPct: (start / totalWk) * 100,
+      widthPct: (plan.timeline[i].duration_weeks / totalWk) * 100,
+    };
+  });
   return (
     <section className="space-y-8">
       <SectionHeader title="Project Timeline" pill={`${totalWk} weeks · ${plan.timeline.length} phases`}>
@@ -441,10 +379,7 @@ function TimelineSection({ plan, planId, domain }: { plan: ExperimentPlan; planI
       </SectionHeader>
       <div className="space-y-4">
         {plan.timeline.map((phase, i) => {
-          const start = cursor;
-          cursor += phase.duration_weeks;
-          const startPct = (start / totalWk) * 100;
-          const widthPct = (phase.duration_weeks / totalWk) * 100;
+          const { startPct, widthPct } = positions[i];
           return (
             <div key={i}>
               <div className="flex items-center justify-between text-sm mb-1.5">

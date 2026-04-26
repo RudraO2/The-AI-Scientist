@@ -43,6 +43,8 @@ npm run dev
 
 Open http://localhost:3000.
 
+For Vercel, import the repository with `frontend` as the project root and set `API_PROXY_URL` to the deployed backend URL. The frontend keeps calling `/api/*` because Next.js rewrites proxy those requests server-side.
+
 ## Demo flow
 
 1. Enter hypothesis (or pick a sample chip)

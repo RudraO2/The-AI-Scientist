@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS corrections (
 );
 CREATE INDEX IF NOT EXISTS idx_corrections_plan_id ON corrections(plan_id);
 CREATE INDEX IF NOT EXISTS idx_corrections_domain ON corrections(domain);
+CREATE INDEX IF NOT EXISTS idx_corrections_hydra_id ON corrections(hydra_memory_id);
 
 CREATE TABLE IF NOT EXISTS applied (
     plan_id       TEXT NOT NULL,
