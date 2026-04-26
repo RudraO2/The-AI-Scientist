@@ -2,40 +2,31 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles, FlaskConical, Microscope, Wind, Dna } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { parseQc } from "@/lib/api";
-import { cn } from "@/lib/utils";
 
 const SAMPLES = [
   {
-    icon: Microscope,
     label: "Diagnostics",
-    color: "text-sky-400",
+    short: "Paper-based CRP biosensor for inflammation in whole blood",
     text:
       "A paper-based electrochemical biosensor functionalized with anti-CRP antibodies will detect C-reactive protein in whole blood at concentrations below 0.5 mg/L within 10 minutes, matching laboratory ELISA sensitivity without requiring sample preprocessing.",
   },
   {
-    icon: Dna,
     label: "Gut Health",
-    color: "text-emerald-400",
+    short: "Probiotic effect on intestinal permeability in mice",
     text:
       "Supplementing C57BL/6 mice with Lactobacillus rhamnosus GG for 4 weeks will reduce intestinal permeability by at least 30% compared to controls, measured by FITC-dextran assay, due to upregulation of tight junction proteins claudin-1 and occludin.",
   },
   {
-    icon: FlaskConical,
     label: "Cell Biology",
-    color: "text-fuchsia-400",
+    short: "Trehalose vs DMSO cryoprotection of HeLa cells",
     text:
       "Replacing sucrose with trehalose as a cryoprotectant in the freezing medium will increase post-thaw viability of HeLa cells by at least 15 percentage points compared to the standard DMSO protocol, due to trehalose's superior membrane stabilization at low temperatures.",
   },
   {
-    icon: Wind,
     label: "Climate",
-    color: "text-amber-400",
+    short: "Microbial CO₂ fixation to acetate at the cathode",
     text:
       "Introducing Sporomusa ovata into a bioelectrochemical system at a cathode potential of −400 mV vs SHE will fix CO₂ into acetate at a rate of at least 150 mmol/L/day, outperforming current biocatalytic carbon capture benchmarks by at least 20%.",
   },
@@ -66,72 +57,104 @@ export function HypothesisForm() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-      className="w-full max-w-3xl mx-auto"
+      className="w-full"
     >
-      <div className="glass rounded-2xl p-6 shadow-2xl">
-        <Textarea
-          value={hypothesis}
-          onChange={(e) => setHypothesis(e.target.value)}
-          placeholder="State your hypothesis. Name the intervention, the measurable outcome, the threshold, and the implied control."
-          rows={6}
-          className="text-base leading-relaxed font-serif"
-          autoFocus
+      {/* Main Input Canvas */}
+      <div className="w-full bg-white border-[0.5px] border-stone-300 p-12 mb-12 relative">
+        {/* Notebook Grid background within the card */}
+        <div
+          className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          style={{
+            backgroundImage: "radial-gradient(#16342e 0.5px, transparent 0.5px)",
+            backgroundSize: "16px 16px",
+          }}
         />
-
-        <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2 text-xs text-ink-400">
-            <Sparkles className="h-3.5 w-3.5 text-accent-400" />
-            Semantic Scholar + arXiv · grounded in protocols.io
-          </div>
-          <Button
-            size="lg"
-            onClick={submit}
-            disabled={isPending || hypothesis.trim().length < 20}
-            className="min-w-[180px]"
+        <div className="relative z-10">
+          <label
+            htmlFor="hypothesis"
+            className="mb-4 block text-[11px] font-semibold uppercase tracking-[0.05em] text-[#5d6052]"
+            style={{ fontFamily: "Inter, system-ui, sans-serif" }}
           >
-            {isPending ? (
-              <span className="flex items-center gap-2">
-                <span className="h-4 w-4 rounded-full border-2 border-ink-950/40 border-t-ink-950 animate-spin" />
-                Checking literature…
+            Primary Research Question / Hypothesis
+          </label>
+          <textarea
+            id="hypothesis"
+            value={hypothesis}
+            onChange={(e) => setHypothesis(e.target.value)}
+            placeholder="Enter the core proposition of your upcoming study here..."
+            rows={6}
+            autoFocus
+            className="w-full bg-transparent border-none outline-none focus:ring-0 resize-none p-0 text-[24px] leading-[1.3] text-[#16342e] placeholder:text-[#e5e2e1]"
+            style={{ fontFamily: "Newsreader, serif", fontWeight: 500 }}
+          />
+          <div className="mt-8 pt-8 border-t-[0.5px] border-stone-100 flex justify-between items-center flex-wrap gap-4">
+            <div className="flex gap-4">
+              <span
+                className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.05em] text-stone-400"
+                style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>
+                  edit_note
+                </span>
+                Plain language welcome
               </span>
-            ) : (
-              <>
-                Run literature check
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </Button>
+            </div>
+            <button
+              onClick={submit}
+              disabled={isPending || hypothesis.trim().length < 20}
+              className="bg-[#16342e] text-white text-[11px] font-semibold uppercase tracking-[0.05em] px-8 py-4 hover:bg-[#2D4B44] transition-colors border-none disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+            >
+              {isPending ? "Checking literature..." : "Proceed to Novelty Check"}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="mt-8">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-xs uppercase tracking-wider text-ink-400">Try a sample hypothesis</span>
-          <span className="h-px flex-1 bg-gradient-to-r from-ink-700/60 to-transparent" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {SAMPLES.map((s) => {
-            const Icon = s.icon;
-            return (
-              <button
-                key={s.label}
-                onClick={() => setHypothesis(s.text)}
-                disabled={isPending}
-                className={cn(
-                  "group text-left p-4 rounded-xl border border-ink-700/60 bg-ink-900/40 hover:border-ink-600 hover:bg-ink-800/60 transition-all",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/50",
-                )}
+      {/* Example Grid */}
+      <div className="w-full">
+        <h2
+          className="mb-6 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.05em] text-[#5d6052]"
+          style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>
+            lightbulb
+          </span>
+          Inspiration from the Archive
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-2 gap-6">
+          {SAMPLES.map((s) => (
+            <button
+              key={s.label}
+              onClick={() => setHypothesis(s.text)}
+              disabled={isPending}
+              className="group text-left bg-[#f6f3f2] border-[0.5px] border-[#c1c8c5] p-6 cursor-pointer hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-[#2D4B44]/30"
+            >
+              <span
+                className="mb-3 block text-[11px] font-semibold uppercase tracking-[0.05em] text-[#c6c8b8]"
+                style={{ fontFamily: "Inter, system-ui, sans-serif" }}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <Icon className={cn("h-4 w-4", s.color)} />
-                  <Badge variant="outline" className="text-[10px]">{s.label}</Badge>
-                </div>
-                <p className="text-sm text-ink-300 line-clamp-2 group-hover:text-ink-100 transition-colors">
-                  {s.text}
-                </p>
-              </button>
-            );
-          })}
+                {s.label}
+              </span>
+              <p
+                className="text-[14px] leading-[1.5] text-[#1c1b1b] group-hover:text-[#16342e] transition-colors"
+                style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+              >
+                {s.short}
+              </p>
+              <div className="mt-4 flex items-center text-[#16342e] opacity-0 group-hover:opacity-100 transition-opacity">
+                <span
+                  className="mr-1 text-[11px] font-semibold uppercase tracking-[0.05em]"
+                  style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+                >
+                  Load Template
+                </span>
+                <span className="material-symbols-outlined" style={{ fontSize: "12px" }}>
+                  arrow_forward
+                </span>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
     </motion.div>

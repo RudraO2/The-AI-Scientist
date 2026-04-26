@@ -105,11 +105,12 @@ No build step. Python interpreted directly. Production launch would drop `--relo
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-## Testing
+### Testing
 
-No tests exist in either part. Hackathon scope. If adding:
+Backend tests exist and can be run with `python -m unittest discover -s backend/tests`.
 
-- Backend: `pytest` + `httpx.AsyncClient` for endpoint tests; mock `GeminiClient` and `HydraClient`.
+If adding frontend tests next:
+
 - Frontend: Vitest + React Testing Library; e2e via Playwright would cover the form → plan flow.
 
 ## Common Tasks
@@ -134,14 +135,9 @@ Edit `frontend/components/hypothesis-form.tsx:13-42` (`SAMPLES` array). Each ent
 
 Set `GEMINI_MODEL` in `backend/.env`. Avoid `gemini-pro` (rate-limited on free tier per smoke test).
 
-### Switching from in-memory `PLANS` to persistent storage
+### Persistence
 
-`PLANS: dict[str, dict]` in `backend/main.py:26`. SQLite swap-in was discussed and deferred. Touchpoints:
-
-- `main.py:111-118` — `PLANS[plan_id] = {...}` (write)
-- `main.py:124-133` — `PLANS.get(plan_id)` (read)
-
-A small SQLite layer (`sqlite3` + `aiosqlite` for async) over a single `plans` table with `(plan_id TEXT PRIMARY KEY, payload JSON, created_at TIMESTAMP)` would survive restarts without changing the API contract.
+SQLite now stores plans, corrections, and lineage in `backend/db.py`. If you extend persistence, keep the `plans`, `corrections`, and `applied` tables in sync with the API contract.
 
 ### Editing prompts safely
 

@@ -18,9 +18,9 @@ Liveness probe.
 
 ---
 
-### `POST /api/generate`
+### `POST /api/parse_qc`
 
-Full pipeline: parse hypothesis → run literature QC + recall corrections (parallel) → generate plan → store in memory → return.
+Parse hypothesis, run literature QC, recall corrections, and persist the partial plan record.
 
 **Request body** — `GeneratePlanRequest`
 
@@ -39,7 +39,13 @@ Full pipeline: parse hypothesis → run literature QC + recall corrections (para
   "plan_id": "8-char hex string",
   "parsed": ParsedHypothesis,
   "qc": LiteratureQCResult,
-  "plan": ExperimentPlan
+  "recalled_corrections": [
+    {
+      "text": "string",
+      "score": 0.0,
+      "section_hint": "protocol | materials | budget | timeline | validation | null"
+    }
+  ]
 }
 ```
 
@@ -49,12 +55,41 @@ Full pipeline: parse hypothesis → run literature QC + recall corrections (para
 |---|---|
 | 422 | Pydantic validation failure on `hypothesis` length |
 | 502 | `Hypothesis parse failed: {e}` (Gemini parse error) |
+
+**Side effects**
+
+- Stores `{hypothesis, parsed, qc, domain}` in SQLite.
+- Triggers parallel HydraDB recall (read-only) and parallel literature search (read-only).
+
+---
+
+### `POST /api/plan/{plan_id}/generate`
+
+Generate the full plan from the parsed hypothesis and QC result.
+
+**Response 200** — `GeneratePlanResponse`
+
+```json
+{
+  "plan_id": "8-char hex string",
+  "parsed": ParsedHypothesis,
+  "qc": LiteratureQCResult,
+  "plan": ExperimentPlan
+}
+```
+
+**Errors**
+
+| Status | Detail |
+|---|---|
+| 404 | `Plan not found` |
+| 404 | `Plan generation not yet complete` |
 | 502 | `Plan generation failed: {e}` (Gemini generate error) |
 
 **Side effects**
 
-- Stores `{hypothesis, parsed, qc, plan, domain}` in `PLANS[plan_id]` (in-memory).
-- Triggers parallel HydraDB recall (read-only) and parallel literature search (read-only).
+- Fills the plan payload in SQLite.
+- Populates `applied_corrections` when the model surfaces recalled memory.
 
 **Latency (verified, local)**: ~22s wall-clock (3s parse + 2s parallel QC/recall + 17s generate).
 
@@ -76,13 +111,13 @@ Re-fetch a previously generated plan.
 |---|---|
 | 404 | `Plan not found` |
 
-The 404 happens on backend restart — `PLANS` is in-memory, so any restart wipes all plans. Frontend `/plan/[id]` page handles this gracefully with a "Plan not found — generate a new one" view.
+SQLite persists plan records, so restarts no longer wipe plans.
 
 ---
 
 ### `POST /api/feedback`
 
-Store a scientist correction in HydraDB. Future plans for the same domain will recall it.
+Store a scientist correction in HydraDB and record the correction locally.
 
 **Request body** — `FeedbackRequest`
 
@@ -119,6 +154,8 @@ The frontend constructs `before_text` per-section from the relevant plan slice (
 
 - Calls `ensure_tenant(max_wait_seconds=120.0)` — blocks up to 2 min waiting for vectorstore on a cold tenant.
 - Writes one memory body to HydraDB tenant `ai-scientist-test` / sub `default`. Body shape: `[domain:X] [section:Y] Scientist correction. Original: {before[:400]} | Corrected to: {after[:400]} | Reason: {rationale[:400]}`.
+
+The local SQLite row is still written even if Hydra ingest fails.
 
 ---
 

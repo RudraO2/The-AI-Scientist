@@ -18,8 +18,8 @@ This index is the primary entry point for AI-assisted development on this repo. 
 
 - **Tech:** FastAPI 0.115 · Pydantic v2 · httpx · `google-genai` 1.27 · `hydra-db-python` 0.1.6
 - **Entry point:** `backend/main.py` (`uvicorn main:app --reload --port 8000`)
-- **Routes:** `POST /api/generate`, `GET /api/plan/{id}`, `POST /api/feedback`, `POST /api/recall`, `GET /health`
-- **Persistence:** in-memory `dict` (`PLANS`) keyed by `plan_id`. Resets on restart.
+- **Routes:** `POST /api/parse_qc`, `POST /api/plan/{id}/generate`, `GET /api/plan/{id}`, `GET /api/plan/{id}/qc`, `GET /api/plan/{id}/lineage`, `POST /api/feedback`, `POST /api/recall`, `GET /health`
+- **Persistence:** SQLite for plans/corrections/applied lineage. Plans survive restart.
 - **External calls:** Gemini (parse + plan), Semantic Scholar Graph API + arXiv Atom (literature QC), HydraDB (correction memory)
 
 ### frontend (Next.js / React)
@@ -58,7 +58,7 @@ When planning new features, run the PRD workflow and provide this index as input
 
 ## Known Hackathon-Scope Gaps
 
-- No persistent DB. `PLANS` dict in `main.py` is volatile — backend restart wipes plans.
+- SQLite persistence for plans and corrections.
 - No auth, no per-user multi-tenant. Single shared HydraDB tenant: `ai-scientist-test`.
 - No streaming responses. Plan generation blocks ~17s with spinner.
 - No deployment. Localhost only.

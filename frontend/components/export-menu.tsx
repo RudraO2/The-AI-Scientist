@@ -9,6 +9,9 @@ import type { ExperimentPlan } from "@/lib/types";
 export function ExportMenu({ plan }: { plan: ExperimentPlan }) {
   const [copied, setCopied] = useState(false);
 
+  const exportButtonClassName =
+    "border border-stone-300 bg-white/90 text-[#16342e] shadow-sm hover:border-[#2D4B44]/30 hover:bg-white hover:text-[#16342e]";
+
   const onPrint = () => {
     if (typeof window !== "undefined") window.print();
   };
@@ -26,11 +29,11 @@ export function ExportMenu({ plan }: { plan: ExperimentPlan }) {
 
   return (
     <div data-export-menu className="flex items-center gap-2">
-      <Button variant="ghost" size="sm" onClick={onPrint}>
+      <Button variant="ghost" size="sm" onClick={onPrint} className={exportButtonClassName}>
         <Printer className="h-3.5 w-3.5" />
         Save as PDF
       </Button>
-      <Button variant="ghost" size="sm" onClick={onCopy}>
+      <Button variant="ghost" size="sm" onClick={onCopy} className={exportButtonClassName}>
         {copied ? <Check className="h-3.5 w-3.5" /> : <Clipboard className="h-3.5 w-3.5" />}
         Copy as Markdown
       </Button>

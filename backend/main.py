@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 import uuid
 import asyncio
+import logging
+import time
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
@@ -27,6 +29,14 @@ from literature import run_literature_qc
 import db
 
 
+logger = logging.getLogger("ai_scientist")
+if not logger.handlers:
+    logging.basicConfig(
+        level=os.environ.get("LOG_LEVEL", "INFO"),
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Pre-warm clients and HydraDB tenant so first user request is fast.
@@ -36,7 +46,7 @@ async def lifespan(app: FastAPI):
     try:
         await asyncio.to_thread(app.state.hydra.ensure_tenant)
     except Exception as e:
-        print(f"[startup] HydraDB tenant warmup failed: {e}")
+        logger.warning("HydraDB tenant warmup failed: %s", e)
     yield
 
 
@@ -52,9 +62,35 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def request_logging_middleware(request, call_next):
+    request_id = request.headers.get("x-request-id") or uuid.uuid4().hex
+    start = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception("request failed", extra={"request_id": request_id, "path": request.url.path})
+        raise
+    response.headers["X-Request-ID"] = request_id
+    duration_ms = (time.perf_counter() - start) * 1000
+    logger.info(
+        "%s %s -> %s in %.1fms",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+    return response
+
+
 @app.get("/health")
 async def health():
-    return {"ok": True}
+    return {
+        "ok": True,
+        "db": db.is_ready(),
+        "gemini_configured": bool(os.environ.get("GEMINI_API_KEY")),
+        "hydra_configured": bool(os.environ.get("HYDRADB_API_KEY")),
+    }
 
 
 # ---------- Stage 1+2: parse + literature QC + recall ----------
@@ -302,7 +338,7 @@ async def submit_feedback(req: FeedbackRequest):
         )
     except Exception as e:
         memory_id = None
-        print(f"[feedback] HydraDB ingest failed, persisting locally only: {e}")
+        logger.warning("HydraDB ingest failed, persisting locally only: %s", e)
 
     correction_id = await asyncio.to_thread(
         db.insert_correction,

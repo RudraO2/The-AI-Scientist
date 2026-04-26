@@ -67,6 +67,15 @@ def init_db() -> None:
         conn.executescript(SCHEMA)
 
 
+def is_ready() -> bool:
+    try:
+        with _connect() as conn:
+            conn.execute("SELECT 1")
+        return True
+    except Exception:
+        return False
+
+
 def insert_partial_plan(*, plan_id: str, hypothesis: str, domain: str,
                         parsed: dict, qc: dict) -> None:
     with _connect() as conn:

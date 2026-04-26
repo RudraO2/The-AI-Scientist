@@ -11,6 +11,7 @@ Take a natural-language scientific hypothesis → run literature QC → generate
 - **LLM:** Google Gemini (1M ctx, structured output via Pydantic JSON schema)
 - **Memory layer:** HydraDB (`recall_preferences` semantic search over scientist corrections)
 - **Literature QC:** Semantic Scholar Graph API + arXiv API
+- **Persistence:** SQLite for plans, corrections, and lineage
 
 ## Run
 
@@ -23,6 +24,12 @@ python -m venv .venv
 pip install -r requirements.txt
 cp .env.example .env       # fill in HYDRADB_API_KEY + GEMINI_API_KEY
 uvicorn main:app --reload --port 8000
+```
+
+Run backend tests with:
+
+```bash
+python -m unittest discover -s backend/tests
 ```
 
 ### Frontend
@@ -40,5 +47,5 @@ Open http://localhost:3000.
 
 1. Enter hypothesis (or pick a sample chip)
 2. Literature QC runs (~2s) → novelty signal + refs
-3. Plan generated (~10-20s) → protocol, materials w/ catalog #s, budget, timeline, validation
+3. Plan generated (~10-20s) → protocol, materials w/ catalog #s, budget, timeline, validation, risks
 4. Edit any section → submit correction → next plan for similar hypothesis applies it
