@@ -1,0 +1,64 @@
+{
+  "workflow_version": "1.2.0",
+  "timestamps": {
+    "started": "2026-04-26T00:00:00Z",
+    "last_updated": "2026-04-26T00:00:00Z",
+    "completed": "2026-04-26T00:00:00Z"
+  },
+  "mode": "initial_scan",
+  "scan_level": "deep",
+  "project_root": "C:\\Users\\rpxi1\\OneDrive\\Documents\\Desktop\\1HN",
+  "project_knowledge": "C:\\Users\\rpxi1\\OneDrive\\Documents\\Desktop\\1HN\\docs",
+  "repository_type": "multi-part",
+  "project_types": [
+    {"part_id": "backend", "project_type_id": "backend", "display_name": "Backend (FastAPI)"},
+    {"part_id": "frontend", "project_type_id": "web", "display_name": "Frontend (Next.js)"}
+  ],
+  "completed_steps": [
+    {"step": "step_1", "status": "completed", "summary": "Classified as multi-part with 2 parts (backend, frontend)"},
+    {"step": "step_2", "status": "completed", "summary": "Found 1 existing doc (README.md)"},
+    {"step": "step_3", "status": "completed", "summary": "Tech stack: FastAPI on Python 3.13 + Next.js 15 on TS 5.7"},
+    {"step": "step_4", "status": "completed", "summary": "Conditional analysis: 5 backend endpoints, 11 Pydantic models, 7 UI primitives + 4 feature components"},
+    {"step": "step_5", "status": "completed", "summary": "Source tree documented"},
+    {"step": "step_6", "status": "completed", "summary": "Dev guide written"},
+    {"step": "step_7", "status": "completed", "summary": "Integration architecture documented (1 inter-part boundary, 4 external integrations)"},
+    {"step": "step_8", "status": "completed", "summary": "Architecture docs written for 2 parts"},
+    {"step": "step_9", "status": "completed", "summary": "All supporting docs written"},
+    {"step": "step_10", "status": "completed", "summary": "Master index generated"},
+    {"step": "step_11", "status": "completed", "summary": "No incomplete markers"},
+    {"step": "step_12", "status": "completed", "summary": "Workflow complete"}
+  ],
+  "current_step": "completed",
+  "outputs_generated": [
+    "docs/index.md",
+    "docs/project-overview.md",
+    "docs/source-tree-analysis.md",
+    "docs/architecture-backend.md",
+    "docs/architecture-frontend.md",
+    "docs/integration-architecture.md",
+    "docs/api-contracts-backend.md",
+    "docs/data-models.md",
+    "docs/component-inventory-frontend.md",
+    "docs/development-guide.md",
+    "docs/project-parts.json",
+    "docs/project-scan-report.json"
+  ],
+  "findings": {
+    "project_classification": "multi-part monorepo: backend (FastAPI/Python) + frontend (Next.js/TS)",
+    "technology_stack": {
+      "backend": "FastAPI 0.115, Pydantic 2, httpx, google-genai 1.27, hydra-db-python 0.1.6",
+      "frontend": "Next.js 15.1, React 19, TS 5.7, Tailwind 3.4, Radix, Framer Motion, sonner"
+    },
+    "api_endpoints": 5,
+    "data_models": 11,
+    "ui_components": 11,
+    "integration_points": 5,
+    "known_gaps": [
+      "No persistent DB — PLANS dict in main.py is volatile",
+      "No auth or per-user multi-tenant",
+      "No streaming responses — Gemini call blocks ~17s",
+      "No deployment — localhost only",
+      "Manual TS type mirror — drift risk between backend/schemas.py and frontend/lib/types.ts"
+    ]
+  }
+}

@@ -1,4 +1,7 @@
-// Mirrors backend Pydantic schemas. Keep in sync.
+// SOURCE OF TRUTH: backend/schemas.py
+// When you change a Pydantic model there, update the matching interface here.
+// Run-time check: http://localhost:8000/openapi.json
+// TODO: add openapi-typescript codegen post-hackathon when surface grows.
 
 export type Domain = "diagnostics" | "gut_health" | "cell_biology" | "climate" | "other";
 
@@ -65,6 +68,8 @@ export interface AppliedCorrection {
   correction_text: string;
   relevance_score: number;
   applied_to_section: string;
+  correction_id: number | null;
+  source_plan_id: string | null;
 }
 
 export interface ExperimentPlan {
@@ -89,7 +94,48 @@ export interface GeneratePlanResponse {
   plan: ExperimentPlan;
 }
 
-export type FeedbackSection = "protocol" | "materials" | "budget" | "timeline" | "validation";
+export interface RecalledCorrectionSummary {
+  text: string;
+  score: number;
+  section_hint: string | null;
+}
+
+export interface ParseQcResponse {
+  plan_id: string;
+  parsed: ParsedHypothesis;
+  qc: LiteratureQCResult;
+  recalled_corrections: RecalledCorrectionSummary[];
+}
+
+export interface LineageEntry {
+  correction_id: number;
+  section: string;
+  applied_section: string;
+  before_text: string;
+  after_text: string;
+  rating: number | null;
+  annotation: string | null;
+  rationale: string;
+  source_plan_id: string;
+  source_domain: string | null;
+  source_created_at: string | null;
+}
+
+export interface HistoryItem {
+  correction_id: number;
+  plan_id: string;
+  section: string;
+  domain: Domain;
+  before_text: string;
+  after_text: string;
+  rating: number | null;
+  annotation: string | null;
+  rationale: string;
+  created_at: string;
+  applied_count: number;
+}
+
+export type FeedbackSection = "protocol" | "materials" | "budget" | "timeline" | "validation" | "risks";
 
 export interface FeedbackPayload {
   plan_id: string;
@@ -98,4 +144,6 @@ export interface FeedbackPayload {
   before_text: string;
   after_text: string;
   rationale: string;
+  rating?: number | null;
+  annotation?: string | null;
 }

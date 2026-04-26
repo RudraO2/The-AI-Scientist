@@ -72,7 +72,9 @@ class AppliedCorrection(BaseModel):
     """A scientist correction from HydraDB that influenced this plan."""
     correction_text: str
     relevance_score: float
-    applied_to_section: str = Field(description="protocol|materials|budget|timeline|validation")
+    applied_to_section: str = Field(description="protocol|materials|budget|timeline|validation|risks")
+    correction_id: Optional[int] = None
+    source_plan_id: Optional[str] = None
 
 
 class ExperimentPlan(BaseModel):
@@ -110,15 +112,18 @@ class GeneratePlanResponse(BaseModel):
 class FeedbackRequest(BaseModel):
     plan_id: str
     domain: Domain
-    section: Literal["protocol", "materials", "budget", "timeline", "validation"]
+    section: Literal["protocol", "materials", "budget", "timeline", "validation", "risks"]
     before_text: str
     after_text: str
-    rationale: str = Field(description="Why the scientist made this correction.")
+    rationale: str = Field(default="", description="Why the scientist made this correction.")
+    rating: Optional[int] = Field(default=None, ge=1, le=5)
+    annotation: Optional[str] = None
 
 
 class FeedbackResponse(BaseModel):
     success: bool
     memory_id: str
+    correction_id: int
     message: str
 
 
@@ -126,3 +131,45 @@ class CorrectionItem(BaseModel):
     memory_id: str
     text: str
     timestamp: Optional[str] = None
+
+
+class RecalledCorrectionSummary(BaseModel):
+    """Summary of a Hydra-recalled correction shown on QC interstitial (pre-plan)."""
+    text: str
+    score: float
+    section_hint: Optional[str] = None
+
+
+class ParseQcResponse(BaseModel):
+    plan_id: str
+    parsed: ParsedHypothesis
+    qc: LiteratureQCResult
+    recalled_corrections: list[RecalledCorrectionSummary] = Field(default_factory=list)
+
+
+class LineageEntry(BaseModel):
+    correction_id: int
+    section: str
+    applied_section: str
+    before_text: str
+    after_text: str
+    rating: Optional[int] = None
+    annotation: Optional[str] = None
+    rationale: str
+    source_plan_id: str
+    source_domain: Optional[str] = None
+    source_created_at: Optional[str] = None
+
+
+class HistoryItem(BaseModel):
+    correction_id: int
+    plan_id: str
+    section: str
+    domain: Domain
+    before_text: str
+    after_text: str
+    rating: Optional[int] = None
+    annotation: Optional[str] = None
+    rationale: str
+    created_at: str
+    applied_count: int

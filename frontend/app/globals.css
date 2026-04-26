@@ -34,3 +34,65 @@
     @apply animate-shimmer;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  @page { size: Letter; margin: 0.75in; }
+
+  html, body {
+    background: white !important;
+    color: black !important;
+    background-image: none !important;
+  }
+
+  header,
+  footer,
+  nav,
+  [data-export-menu],
+  [data-applied-banner],
+  [data-lineage-panel],
+  [data-tabs-list] [role="tablist"],
+  [data-no-print] {
+    display: none !important;
+  }
+
+  [data-tab-content] {
+    display: block !important;
+    page-break-inside: avoid;
+    margin-top: 1.25rem;
+  }
+
+  [data-tab-content]::before {
+    content: attr(data-tab-content);
+    display: block;
+    text-transform: capitalize;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 0.25rem;
+  }
+
+  .glass {
+    background: white !important;
+    border: 1px solid #ddd !important;
+    backdrop-filter: none !important;
+  }
+
+  *, *::before, *::after {
+    color: black !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  a { text-decoration: underline; color: black !important; }
+}

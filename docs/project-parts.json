@@ -1,0 +1,85 @@
+{
+  "repository_type": "multi-part",
+  "parts": [
+    {
+      "part_id": "backend",
+      "display_name": "Backend (FastAPI)",
+      "project_type_id": "backend",
+      "root_path": "backend/",
+      "tech_stack": {
+        "language": "Python 3.13",
+        "framework": "FastAPI 0.115.6",
+        "validation": "Pydantic >=2.11.7",
+        "http_client": "httpx 0.28.1",
+        "llm_sdk": "google-genai 1.27.0",
+        "memory_sdk": "hydra-db-python 0.1.6",
+        "server": "uvicorn[standard] 0.32.1"
+      },
+      "entry_point": "backend/main.py",
+      "run_command": "uvicorn main:app --reload --port 8000",
+      "documented_at": ["docs/architecture-backend.md", "docs/api-contracts-backend.md", "docs/data-models.md"]
+    },
+    {
+      "part_id": "frontend",
+      "display_name": "Frontend (Next.js)",
+      "project_type_id": "web",
+      "root_path": "frontend/",
+      "tech_stack": {
+        "framework": "Next.js 15.1.4",
+        "language": "TypeScript 5.7",
+        "ui_library": "React 19.0.0",
+        "styling": "Tailwind CSS 3.4.17",
+        "primitives": "Radix UI (dialog, slot, tabs)",
+        "animation": "framer-motion 11.15",
+        "icons": "lucide-react 0.469",
+        "toast": "sonner 1.7.1"
+      },
+      "entry_point": "frontend/app/layout.tsx",
+      "run_command": "npm run dev",
+      "documented_at": ["docs/architecture-frontend.md", "docs/component-inventory-frontend.md"]
+    }
+  ],
+  "integration_points": [
+    {
+      "from": "frontend",
+      "to": "backend",
+      "type": "REST/JSON over HTTP",
+      "endpoints_used": ["POST /api/generate", "GET /api/plan/{id}", "POST /api/feedback"],
+      "endpoints_unused": ["POST /api/recall", "GET /health"],
+      "frontend_env": "NEXT_PUBLIC_API_URL",
+      "backend_cors_env": "CORS_ORIGINS",
+      "type_contract": "manually mirrored: backend/schemas.py -> frontend/lib/types.ts"
+    },
+    {
+      "from": "backend",
+      "to": "Gemini",
+      "type": "HTTPS via google-genai SDK",
+      "auth": "GEMINI_API_KEY",
+      "model": "gemini-3-flash-preview",
+      "calls_per_request": ["parse_hypothesis", "generate_plan"]
+    },
+    {
+      "from": "backend",
+      "to": "HydraDB",
+      "type": "HTTPS via hydra-db-python SDK",
+      "auth": "HYDRADB_API_KEY",
+      "tenant": "ai-scientist-test",
+      "ingest": "upload.add_memory(infer=True, upsert=True)",
+      "recall": "recall.recall_preferences"
+    },
+    {
+      "from": "backend",
+      "to": "Semantic Scholar",
+      "type": "HTTPS via httpx",
+      "endpoint": "https://api.semanticscholar.org/graph/v1/paper/search",
+      "auth": "optional SEMANTIC_SCHOLAR_API_KEY"
+    },
+    {
+      "from": "backend",
+      "to": "arXiv",
+      "type": "HTTPS via httpx (Atom XML)",
+      "endpoint": "http://export.arxiv.org/api/query",
+      "auth": "none"
+    }
+  ]
+}

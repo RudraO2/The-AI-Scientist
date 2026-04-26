@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { HypothesisForm } from "@/components/hypothesis-form";
-import { FlaskConical, ArrowUpRight, Github } from "lucide-react";
+import { FlaskConical, ArrowUpRight, Github, History } from "lucide-react";
 
 export default function Home() {
   return (
@@ -16,14 +17,23 @@ export default function Home() {
             <span className="text-[10px] uppercase tracking-widest text-ink-400">Fulcrum × Hack-Nation</span>
           </div>
         </div>
-        <a
-          href="https://github.com"
-          className="inline-flex items-center gap-1.5 text-xs text-ink-400 hover:text-ink-100 transition-colors"
-        >
-          <Github className="h-3.5 w-3.5" />
-          GitHub
-          <ArrowUpRight className="h-3 w-3" />
-        </a>
+        <div className="flex items-center gap-5">
+          <Link
+            href="/history"
+            className="inline-flex items-center gap-1.5 text-xs text-ink-400 hover:text-ink-100 transition-colors"
+          >
+            <History className="h-3.5 w-3.5" />
+            View history →
+          </Link>
+          <a
+            href="https://github.com"
+            className="inline-flex items-center gap-1.5 text-xs text-ink-400 hover:text-ink-100 transition-colors"
+          >
+            <Github className="h-3.5 w-3.5" />
+            GitHub
+            <ArrowUpRight className="h-3 w-3" />
+          </a>
+        </div>
       </header>
 
       <section className="relative z-10 container pt-20 pb-12 text-center">
@@ -61,7 +71,7 @@ export default function Home() {
             {
               n: "03",
               title: "Plan + Memory",
-              body: "Gemini generates a full plan grounded in real protocols. HydraDB recalls past scientist corrections so each plan beats the last.",
+              body: "Gemini generates a full plan grounded in real protocols. A memory layer recalls past scientist corrections so each plan beats the last.",
             },
           ].map((step) => (
             <div key={step.n} className="rounded-xl border border-ink-700/60 bg-ink-900/40 p-5">

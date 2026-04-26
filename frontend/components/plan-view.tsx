@@ -1,25 +1,32 @@
 "use client";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Beaker, Clock, DollarSign, ListChecks, ShieldAlert, Layers,
-  Brain, Sparkles, ChevronRight,
+  Brain, ChevronRight,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CorrectionDialog } from "@/components/correction-dialog";
+import { AtAGlanceStrip } from "@/components/at-a-glance-strip";
+import { LineagePanel } from "@/components/lineage-panel";
+import Link from "next/link";
 import { formatUsd } from "@/lib/utils";
 import type { ExperimentPlan, Domain } from "@/lib/types";
 
 export function PlanView({ plan, planId }: { plan: ExperimentPlan; planId: string }) {
   const domain = plan.domain as Domain;
+  const [tab, setTab] = useState("protocol");
 
   return (
     <div className="space-y-6">
       <PlanHeader plan={plan} />
       {plan.applied_corrections.length > 0 && <AppliedCorrectionsBanner plan={plan} />}
 
-      <Tabs defaultValue="protocol" className="w-full">
+      <AtAGlanceStrip plan={plan} onTabChange={setTab} />
+
+      <Tabs value={tab} onValueChange={setTab} className="w-full" data-tabs-list>
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="protocol"><Beaker className="h-3.5 w-3.5 mr-1" />Protocol</TabsTrigger>
           <TabsTrigger value="materials"><Layers className="h-3.5 w-3.5 mr-1" />Materials</TabsTrigger>
@@ -29,13 +36,15 @@ export function PlanView({ plan, planId }: { plan: ExperimentPlan; planId: strin
           <TabsTrigger value="risks"><ShieldAlert className="h-3.5 w-3.5 mr-1" />Risks</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="protocol"><ProtocolSection plan={plan} planId={planId} domain={domain} /></TabsContent>
-        <TabsContent value="materials"><MaterialsSection plan={plan} planId={planId} domain={domain} /></TabsContent>
-        <TabsContent value="budget"><BudgetSection plan={plan} planId={planId} domain={domain} /></TabsContent>
-        <TabsContent value="timeline"><TimelineSection plan={plan} planId={planId} domain={domain} /></TabsContent>
-        <TabsContent value="validation"><ValidationSection plan={plan} planId={planId} domain={domain} /></TabsContent>
-        <TabsContent value="risks"><RisksSection plan={plan} /></TabsContent>
+        <TabsContent value="protocol" data-tab-content="protocol"><ProtocolSection plan={plan} planId={planId} domain={domain} /></TabsContent>
+        <TabsContent value="materials" data-tab-content="materials"><MaterialsSection plan={plan} planId={planId} domain={domain} /></TabsContent>
+        <TabsContent value="budget" data-tab-content="budget"><BudgetSection plan={plan} planId={planId} domain={domain} /></TabsContent>
+        <TabsContent value="timeline" data-tab-content="timeline"><TimelineSection plan={plan} planId={planId} domain={domain} /></TabsContent>
+        <TabsContent value="validation" data-tab-content="validation"><ValidationSection plan={plan} planId={planId} domain={domain} /></TabsContent>
+        <TabsContent value="risks" data-tab-content="risks"><RisksSection plan={plan} planId={planId} domain={domain} /></TabsContent>
       </Tabs>
+
+      <LineagePanel planId={planId} />
     </div>
   );
 }
@@ -52,59 +61,46 @@ function PlanHeader({ plan }: { plan: ExperimentPlan }) {
         {plan.title}
       </h1>
       <p className="mt-3 text-ink-300 text-sm leading-relaxed max-w-3xl">{plan.hypothesis_summary}</p>
-
-      <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Stat label="Protocol steps" value={`${plan.protocol.length}`} />
-        <Stat label="Materials" value={`${plan.materials.length}`} />
-        <Stat label="Budget" value={formatUsd(plan.total_budget_usd)} />
-        <Stat label="Timeline" value={`${plan.total_duration_weeks} wk`} />
-      </div>
     </motion.div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-ink-700/60 bg-ink-900/40 px-4 py-3">
-      <div className="text-[10px] uppercase tracking-wider text-ink-500">{label}</div>
-      <div className="mt-1 font-mono text-lg text-ink-50">{value}</div>
-    </div>
   );
 }
 
 function AppliedCorrectionsBanner({ plan }: { plan: ExperimentPlan }) {
+  const n = plan.applied_corrections.length;
   return (
-    <motion.div
+    <motion.details
+      data-applied-banner
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="rounded-xl border border-accent-500/30 bg-gradient-to-r from-accent-500/10 to-emerald-500/5 p-4"
+      className="group rounded-xl border border-accent-500/30 bg-gradient-to-r from-accent-500/10 to-emerald-500/5"
     >
-      <div className="flex items-start gap-3">
-        <div className="h-8 w-8 rounded-md bg-accent-500/20 grid place-items-center flex-shrink-0">
-          <Brain className="h-4 w-4 text-accent-400" />
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-accent-400">Applied {plan.applied_corrections.length} past correction{plan.applied_corrections.length === 1 ? "" : "s"}</span>
-            <Sparkles className="h-3 w-3 text-accent-400" />
-          </div>
-          <p className="mt-1 text-xs text-ink-400">
-            Memory layer (HydraDB) retrieved corrections from past similar experiments and applied them silently before generation.
-          </p>
-          <ul className="mt-3 space-y-2">
-            {plan.applied_corrections.map((c, i) => (
-              <li key={i} className="text-xs text-ink-300 flex items-start gap-2">
-                <ChevronRight className="h-3 w-3 mt-0.5 flex-shrink-0 text-accent-500" />
-                <span>
-                  <span className="font-mono text-[10px] text-accent-400 mr-2">→ {c.applied_to_section}</span>
-                  {c.correction_text}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </motion.div>
+      <summary className="cursor-pointer list-none px-4 py-3 flex items-center gap-3">
+        <Brain className="h-4 w-4 text-accent-400 flex-shrink-0" />
+        <span className="text-sm text-accent-400 font-medium">
+          Applied {n} past correction{n === 1 ? "" : "s"}
+        </span>
+        <span className="text-xs text-ink-400 truncate">— from memory of past corrections in this domain</span>
+        <ChevronRight className="h-4 w-4 ml-auto text-accent-400 transition-transform group-open:rotate-90" />
+      </summary>
+      <ul className="px-4 pb-3 pt-1 space-y-2 border-t border-accent-500/20">
+        {plan.applied_corrections.map((c, i) => (
+          <li key={i} className="text-xs text-ink-300 flex items-start gap-2 pt-2">
+            <span className="flex-1">
+              <span className="font-mono text-[10px] text-accent-400 mr-2">→ {c.applied_to_section}</span>
+              {c.correction_text}
+              {c.source_plan_id && (
+                <Link
+                  href={`/plan/${c.source_plan_id}`}
+                  className="ml-2 inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-accent-500/15 text-accent-300 hover:bg-accent-500/25 transition-colors"
+                >
+                  from plan #{c.source_plan_id}
+                </Link>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </motion.details>
   );
 }
 
@@ -113,6 +109,13 @@ function AppliedCorrectionsBanner({ plan }: { plan: ExperimentPlan }) {
 function ProtocolSection({ plan, planId, domain }: { plan: ExperimentPlan; planId: string; domain: Domain }) {
   return (
     <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-ink-200">Protocol steps</h3>
+        <CorrectionDialog
+          planId={planId} domain={domain} section="protocol"
+          beforeText={plan.protocol.map(s => `Step ${s.step_number}: ${s.title}\n${s.description}${s.critical_notes ? `\nCritical: ${s.critical_notes}` : ""}`).join("\n\n")}
+        />
+      </div>
       {plan.protocol.map((step) => (
         <Card key={step.step_number} className="group">
           <CardContent className="p-5">
@@ -191,34 +194,57 @@ function MaterialsSection({ plan, planId, domain }: { plan: ExperimentPlan; plan
 
 function BudgetSection({ plan, planId, domain }: { plan: ExperimentPlan; planId: string; domain: Domain }) {
   const matsTotal = plan.materials.reduce((s, m) => s + m.line_total_usd, 0);
-  const overhead = Math.max(0, plan.total_budget_usd - matsTotal);
+  const remainder = Math.max(0, plan.total_budget_usd - matsTotal);
+  // Derived split of the non-materials remainder. Heuristic, labeled "est."
+  const labour = remainder * 0.6;
+  const equipment = remainder * 0.25;
+  const consumables = remainder * 0.15;
+  const lines: { label: string; value: number; estimate?: boolean }[] = [
+    { label: "Materials & reagents", value: matsTotal },
+    { label: "Labour (1 FTE loaded)", value: labour, estimate: true },
+    { label: "Equipment / instrument time", value: equipment, estimate: true },
+    { label: "Consumables & overhead", value: consumables, estimate: true },
+  ];
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle>Budget summary</CardTitle>
+        <CardTitle>Budget — line items</CardTitle>
         <CorrectionDialog planId={planId} domain={domain} section="budget"
-          beforeText={`Materials: ${formatUsd(matsTotal)}; Overhead/labour: ${formatUsd(overhead)}; Total: ${formatUsd(plan.total_budget_usd)}`} />
+          beforeText={lines.map(l => `${l.label}: ${formatUsd(l.value)}`).join("\n") + `\nTotal: ${formatUsd(plan.total_budget_usd)}`} />
       </CardHeader>
       <CardContent className="space-y-3">
-        <BudgetRow label="Materials" value={matsTotal} pct={matsTotal / plan.total_budget_usd} />
-        <BudgetRow label="Overhead / labour estimate" value={overhead} pct={overhead / plan.total_budget_usd} />
+        {lines.map((l) => (
+          <BudgetRow
+            key={l.label}
+            label={l.label}
+            value={l.value}
+            pct={l.value / plan.total_budget_usd}
+            estimate={l.estimate}
+          />
+        ))}
         <div className="pt-3 border-t border-ink-800/60 flex items-center justify-between">
           <span className="text-sm text-ink-300">Total project cost</span>
           <span className="font-mono text-2xl font-medium bg-gradient-to-r from-accent-400 to-emerald-400 bg-clip-text text-transparent">
             {formatUsd(plan.total_budget_usd)}
           </span>
         </div>
+        <p className="text-[10px] text-ink-500 pt-1">
+          Materials are itemized from supplier catalog. Labour, equipment, consumables are heuristic splits of remainder — adjust per your lab&apos;s rates.
+        </p>
       </CardContent>
     </Card>
   );
 }
 
-function BudgetRow({ label, value, pct }: { label: string; value: number; pct: number }) {
+function BudgetRow({ label, value, pct, estimate }: { label: string; value: number; pct: number; estimate?: boolean }) {
   const safePct = Math.max(0, Math.min(1, isFinite(pct) ? pct : 0));
   return (
     <div>
       <div className="flex items-center justify-between text-sm">
-        <span className="text-ink-300">{label}</span>
+        <span className="text-ink-300 inline-flex items-center gap-1.5">
+          {label}
+          {estimate && <span className="text-[9px] font-mono uppercase tracking-wider text-ink-500 px-1 py-0.5 rounded bg-ink-800/60">est.</span>}
+        </span>
         <span className="font-mono text-ink-100">{formatUsd(value)}</span>
       </div>
       <div className="mt-1.5 h-1.5 bg-ink-800/60 rounded-full overflow-hidden">
@@ -297,10 +323,16 @@ function ValidationSection({ plan, planId, domain }: { plan: ExperimentPlan; pla
   );
 }
 
-function RisksSection({ plan }: { plan: ExperimentPlan }) {
+function RisksSection({ plan, planId, domain }: { plan: ExperimentPlan; planId: string; domain: Domain }) {
   return (
     <Card>
-      <CardHeader><CardTitle>Risks and mitigations</CardTitle></CardHeader>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
+        <CardTitle>Risks and mitigations</CardTitle>
+        <CorrectionDialog
+          planId={planId} domain={domain} section="risks"
+          beforeText={plan.risks_and_mitigations.join("\n")}
+        />
+      </CardHeader>
       <CardContent className="space-y-2">
         {plan.risks_and_mitigations.map((r, i) => (
           <div key={i} className="flex items-start gap-3 p-3 rounded-md bg-ink-900/40 border border-ink-800/60">

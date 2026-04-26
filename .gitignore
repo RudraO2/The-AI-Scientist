@@ -21,6 +21,7 @@ node_modules/
 dist/
 build/
 out/
+*.tsbuildinfo
 
 # IDE
 .vscode/

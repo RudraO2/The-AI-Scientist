@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { generatePlan } from "@/lib/api";
+import { parseQc } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const SAMPLES = [
@@ -53,11 +53,10 @@ export function HypothesisForm() {
     }
     startTransition(async () => {
       try {
-        const res = await generatePlan(hypothesis);
-        toast.success("Plan generated.");
-        router.push(`/plan/${res.plan_id}`);
+        const res = await parseQc(hypothesis);
+        router.push(`/qc/${res.plan_id}`);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Generation failed");
+        toast.error(err instanceof Error ? err.message : "Literature check failed");
       }
     });
   };
@@ -82,7 +81,7 @@ export function HypothesisForm() {
         <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 text-xs text-ink-400">
             <Sparkles className="h-3.5 w-3.5 text-accent-400" />
-            Powered by Gemini · HydraDB memory · Semantic Scholar QC
+            Semantic Scholar + arXiv · grounded in protocols.io
           </div>
           <Button
             size="lg"
@@ -93,11 +92,11 @@ export function HypothesisForm() {
             {isPending ? (
               <span className="flex items-center gap-2">
                 <span className="h-4 w-4 rounded-full border-2 border-ink-950/40 border-t-ink-950 animate-spin" />
-                Working…
+                Checking literature…
               </span>
             ) : (
               <>
-                Generate Plan
+                Run literature check
                 <ArrowRight className="h-4 w-4" />
               </>
             )}

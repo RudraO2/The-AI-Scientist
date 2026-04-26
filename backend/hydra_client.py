@@ -47,7 +47,9 @@ class HydraClient:
         raise TimeoutError(f"HydraDB tenant {self.tenant_id} not ready after {max_wait_seconds}s")
 
     def ingest_correction(self, *, domain: str, section: str, before_text: str,
-                          after_text: str, rationale: str) -> str:
+                          after_text: str, rationale: str,
+                          rating: int | None = None,
+                          annotation: str | None = None) -> str:
         """Store a scientist correction. Returns source_id."""
         # Ingest is a write operation — we DO want to wait longer for the tenant to be ready,
         # because dropping a correction silently would defeat the whole feedback loop.
@@ -55,6 +57,7 @@ class HydraClient:
         body = self._format_correction_body(
             domain=domain, section=section,
             before_text=before_text, after_text=after_text, rationale=rationale,
+            rating=rating, annotation=annotation,
         )
         result = self.client.upload.add_memory(
             memories=[{"text": body, "infer": True}],
@@ -96,11 +99,22 @@ class HydraClient:
 
     @staticmethod
     def _format_correction_body(*, domain: str, section: str,
-                                before_text: str, after_text: str, rationale: str) -> str:
-        return (
-            f"[domain:{domain}] [section:{section}] "
-            f"Scientist correction. "
-            f"Original: {before_text.strip()[:400]} | "
-            f"Corrected to: {after_text.strip()[:400]} | "
-            f"Reason: {rationale.strip()[:400]}"
-        )
+                                before_text: str, after_text: str, rationale: str,
+                                rating: int | None = None,
+                                annotation: str | None = None) -> str:
+        parts = [
+            f"[domain:{domain}] [section:{section}]",
+        ]
+        if rating is not None:
+            parts.append(f"[rating:{rating}/5]")
+        parts.append("Scientist correction.")
+        if before_text.strip() != after_text.strip():
+            parts.append(f"Original: {before_text.strip()[:400]} |")
+            parts.append(f"Corrected to: {after_text.strip()[:400]} |")
+        else:
+            parts.append(f"Text: {before_text.strip()[:400]} |")
+        if rationale.strip():
+            parts.append(f"Reason: {rationale.strip()[:400]}")
+        if annotation and annotation.strip():
+            parts.append(f"Note: {annotation.strip()[:400]}")
+        return " ".join(parts)
